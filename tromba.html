@@ -110,20 +110,6 @@ button{font:inherit;color:inherit;cursor:pointer}
 .heard.good .bignote{color:var(--good)}
 .heard.bad .bignote{color:var(--bad)}
 
-/* virtuelle Trompete */
-.partials{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
-.partials button{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 0;font-family:var(--font-mono);font-size:13px;min-height:44px}
-.partials button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-.partials button.hint{outline:2px dashed var(--brass);outline-offset:1px}
-.valves{display:flex;gap:14px;align-items:center;justify-content:center;flex-wrap:wrap;margin-top:12px}
-.valve{width:68px;height:68px;border-radius:50%;border:3px solid var(--ink2);background:var(--surface);font-family:var(--font-mono);font-size:22px;color:var(--ink2);
-  box-shadow:0 6px 0 var(--line);transition:transform .06s,box-shadow .06s}
-.valve[aria-pressed="true"]{background:var(--brass);border-color:var(--brass);color:var(--on-brass);transform:translateY(5px);box-shadow:0 1px 0 var(--line)}
-.valve.hint{outline:2px dashed var(--brass);outline-offset:3px}
-.blow{min-width:120px;height:68px;border-radius:34px;border:0;background:var(--ink);color:var(--bg);font-weight:600;font-size:16px;touch-action:none;user-select:none}
-.blow.on{background:var(--good);color:#fff}
-.keys{font-size:12px;color:var(--ink2);text-align:center;margin-top:10px}
-kbd{font-family:var(--font-mono);border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;font-size:11px;background:var(--surface2)}
 
 .overlay{position:fixed;inset:0;background:rgba(5,12,18,.62);display:grid;place-items:center;padding:20px;z-index:20}
 .overlay[hidden]{display:none}
@@ -235,28 +221,13 @@ kbd{font-family:var(--font-mono);border:1px solid var(--line);border-bottom-widt
       </section>
     </div>
 
-    <section class="card" aria-label="Eingabe">
+    <section class="card" aria-label="Mikrofon">
       <div class="row">
-        <h3 style="font-size:17px">Eingabe</h3>
-        <div class="seg" role="group" aria-label="Eingabeart">
-          <button id="inMic" aria-pressed="false">Mikrofon</button><button id="inVirt" aria-pressed="true">Virtuelle Trompete</button>
-        </div>
+        <h3 style="font-size:17px">Mikrofon</h3>
+        <button class="btn" id="pMicBtn">Mikrofon einschalten</button>
       </div>
-      <div id="micPanel" hidden style="margin-top:12px">
-        <div class="level"><b id="pLevel"></b></div>
-        <p class="msg" id="pMicMsg">Spiel auf deiner Trompete. Tromba hört den Ton und prüft ihn gegen die Noten.</p>
-      </div>
-      <div id="virtPanel" style="margin-top:12px">
-        <div class="kv" style="margin-bottom:6px">Lippenspannung (Naturton, notiert)</div>
-        <div class="partials" id="partials" role="group" aria-label="Naturton"></div>
-        <div class="valves" id="valves">
-          <button class="valve" data-v="0" aria-pressed="false" aria-label="Ventil 1">1</button>
-          <button class="valve" data-v="1" aria-pressed="false" aria-label="Ventil 2">2</button>
-          <button class="valve" data-v="2" aria-pressed="false" aria-label="Ventil 3">3</button>
-          <button class="blow" id="blow">Blasen (halten)</button>
-        </div>
-        <p class="keys">Ventile antippen (bleiben gedrückt). Tastatur: <kbd>J</kbd> <kbd>K</kbd> <kbd>L</kbd> Ventile, <kbd>Leertaste</kbd> blasen, <kbd>↑</kbd> <kbd>↓</kbd> Lippenspannung.</p>
-      </div>
+      <div class="level" style="margin-top:12px"><b id="pLevel"></b></div>
+      <p class="msg" id="pMicMsg">Spiel auf deiner Trompete. Tromba hört den Ton und prüft ihn gegen die Noten.</p>
     </section>
   </main>
 </div>
@@ -403,25 +374,9 @@ function disableMic(){
   try{mic.stream.getTracks().forEach(function(t){t.stop()});mic.src.disconnect()}catch(e){}
   mic.on=false;hist=[];
 }
-var BLOCKED='Der Browser blockiert hier den Mikrofonzugriff. Öffne die Datei tromba.html direkt auf deinem Gerät (Chrome, Edge, Firefox oder Safari) und erlaube das Mikrofon. Bis dahin kannst du mit der virtuellen Trompete spielen.';
+var BLOCKED='Der Browser erlaubt den Mikrofonzugriff hier nicht. Öffne Tromba in Safari oder Chrome über einen https-Link (zum Beispiel GitHub Pages) und erlaube das Mikrofon, wenn der Browser fragt.';
 
-/* Synth für virtuelle Trompete, Vorhören und Klick */
-var voice=null;
-function voiceSet(m){
-  var c=ac();if(!c)return;
-  var f=soundFreq(m);
-  if(!voice){
-    var o=c.createOscillator(),fl=c.createBiquadFilter(),g=c.createGain();
-    o.type='sawtooth';fl.type='lowpass';fl.frequency.value=2200;fl.Q.value=1.2;g.gain.value=0;
-    o.connect(fl);fl.connect(g);g.connect(c.destination);o.frequency.value=f;o.start();
-    g.gain.setTargetAtTime(0.16,c.currentTime,0.02);voice={o:o,g:g,fl:fl,m:m};
-  }else if(voice.m!==m){voice.o.frequency.setTargetAtTime(f,c.currentTime,0.012);voice.m=m}
-}
-function voiceOff(){
-  if(!voice)return;var c=A,v=voice;voice=null;
-  v.g.gain.setTargetAtTime(0,c.currentTime,0.03);
-  setTimeout(function(){try{v.o.stop();v.o.disconnect();v.g.disconnect()}catch(e){}},250);
-}
+/* Synth für Vorhören und Metronom */
 var master=null;
 function schedule(notes,bpm,t0,withClicks,countIn,total){
   var c=ac(),spb=60/bpm;
@@ -448,10 +403,10 @@ function schedule(notes,bpm,t0,withClicks,countIn,total){
 function cancelAudio(){if(master){try{master.disconnect()}catch(e){}master=null}}
 
 /* ---------- Zustand ---------- */
-var S={view:'home',lesson:null,notes:[],mode:'wait',input:'virtual',bpm:60,phase:'idle',
+var S={view:'home',lesson:null,notes:[],mode:'wait',bpm:60,phase:'idle',
   i:0,hold:0,wrong:0,needRelease:false,relMs:0,lastMidi:-1,hits:0,
   pos:0,scroll:0,t0:0,heard:null,level:0,
-  blow:false,partial:1,valves:[false,false,false],cur:-1};
+  cur:-1};
 var PPB=62,STAFF_BOTTOM=130,SP=6;
 var clefEnd=70,headX=120;
 
@@ -497,6 +452,8 @@ function buildNotes(){
     }
     if(n.dur===1.5||n.dur===3)grp.appendChild(svgEl('circle',{cx:x+13,cy:step%2===0?y-SP:y,r:2.2,fill:'currentColor'}));
     if(acc)grp.appendChild(svgEl('text',{x:x-21,y:y+6,'font-size':19,fill:'currentColor','font-family':'var(--font-body)'},'♯'));
+    var fg=fingerFor(n.midi);
+    if(fg)grp.appendChild(svgEl('text',{x:x,y:36,'text-anchor':'middle','font-size':14,'font-weight':600,fill:'currentColor','font-family':'var(--font-mono)'},fg.valves.length?fg.valves.join(' '):'0'));
     if(showLabels)grp.appendChild(svgEl('text',{x:x,y:192,'text-anchor':'middle','font-size':11,fill:'currentColor','font-family':'var(--font-mono)'},nameOf(n.midi)));
     g.appendChild(grp);
   });
@@ -526,12 +483,6 @@ function showTarget(idx){
   $('#gPearls').innerHTML=f?pearlsHTML(f.valves):'';
   $('#gLip').innerHTML=f?lipHTML(f.partial):'';
   refreshNoteClasses();
-  paintHints(f);
-}
-function paintHints(f){
-  var vb=document.querySelectorAll('#valves .valve');
-  vb.forEach(function(b,i){b.classList.toggle('hint',!!(f&&f.valves.indexOf(i+1)>=0))});
-  document.querySelectorAll('#partials button').forEach(function(b,i){b.classList.toggle('hint',!!(f&&f.partial===i))});
 }
 
 /* ---------- Ansichten ---------- */
@@ -551,7 +502,7 @@ function renderHome(){
 }
 function show(view){
   S.view=view;$('#home').hidden=view!=='home';$('#play').hidden=view!=='play';
-  if(view==='home'){stopRun();voiceOff();renderHome()}
+  if(view==='home'){stopRun();renderHome()}
   window.scrollTo(0,0);
 }
 function openLesson(id){
@@ -562,6 +513,7 @@ function openLesson(id){
   show('play');
   drawStatic();buildNotes();S.scroll=0;S.i=0;paintScroll();showTarget(0);updateModeHelp();
   $('#result').hidden=true;
+  if(!mic.on)tryMic($('#pMicMsg')).then(updateMicButtons);
 }
 function updateModeHelp(){
   $('#modeHelp').textContent=S.mode==='wait'?'Tromba wartet, bis du die Note triffst. '+S.lesson.tip:'Spiele im Takt mit dem Metronom. '+S.lesson.tip;
@@ -597,7 +549,7 @@ function clockBeat(){
 }
 function startPreview(){
   var c=ac();if(!c)return;
-  stopRun();voiceOff();resetNotes();
+  stopRun();resetNotes();
   S.phase='preview';S.t0=c.currentTime+0.3;
   schedule(S.notes,S.bpm,S.t0,false,0,0);
   $('#listenBtn').textContent='Stopp';
@@ -625,18 +577,7 @@ function finish(){
   $('#result').hidden=false;
 }
 
-function heardNow(){
-  if(mic.on&&S.input==='mic')return micMidi();
-  if(mic.on&&S.view==='home')return micMidi();
-  if(S.input==='virtual'&&S.view==='play'){
-    return S.blow?{midi:virtMidi(),cents:0}:null;
-  }
-  return null;
-}
-function virtMidi(){
-  var sem=(S.valves[0]?2:0)+(S.valves[1]?1:0)+(S.valves[2]?3:0);
-  return PARTIALS[S.partial]-sem;
-}
+function heardNow(){return mic.on?micMidi():null}
 
 function stepGame(dt){
   var hd=S.heard,n,match;
@@ -709,12 +650,12 @@ function paintHeard(){
     $('#tLevel').style.width=(mic.on?S.level*100:0)+'%';
   }else{
     $('#hNote').textContent=hd?nameOf(hd.midi):'–';
-    $('#hInfo').textContent=hd?(S.input==='mic'?(hd.cents>0?'+':'')+hd.cents+' Cent':'virtuell'):'kein Ton';
-    paintMeter($('#hMeter'),S.input==='mic'?hd:null);
+    $('#hInfo').textContent=hd?(hd.cents>0?'+':'')+hd.cents+' Cent':(mic.on?'kein Ton':'Mikrofon aus');
+    paintMeter($('#hMeter'),hd);
     var tgt=S.notes[S.cur],card=$('#heardCard');
     card.classList.toggle('good',!!(hd&&tgt&&hd.midi===tgt.midi));
     card.classList.toggle('bad',!!(hd&&tgt&&hd.midi!==tgt.midi));
-    $('#pLevel').style.width=(S.input==='mic'?S.level*100:0)+'%';
+    $('#pLevel').style.width=(mic.on?S.level*100:0)+'%';
   }
 }
 
@@ -722,21 +663,12 @@ var last=0;
 function frame(ts){
   var dt=Math.min(60,ts-last);last=ts;
   S.heard=heardNow();
-  if(S.view==='play'&&S.input==='virtual'){
-    if(S.blow&&S.heard)voiceSet(S.heard.midi);else voiceOff();
-  }
   if(S.view==='play'){stepGame(dt);paintScroll()}
   paintHeard();
   requestAnimationFrame(frame);
 }
 
 /* ---------- Eingabe-Steuerung ---------- */
-function setInput(mode){
-  S.input=mode;
-  $('#inMic').setAttribute('aria-pressed',mode==='mic');$('#inVirt').setAttribute('aria-pressed',mode==='virtual');
-  $('#micPanel').hidden=mode!=='mic';$('#virtPanel').hidden=mode!=='virtual';
-  if(mode!=='virtual'){S.blow=false;voiceOff()}
-}
 function tryMic(msgEl){
   msgEl.classList.remove('err');msgEl.textContent='Mikrofonzugriff wird angefragt …';
   return enableMic().then(function(){
@@ -745,67 +677,41 @@ function tryMic(msgEl){
     msgEl.classList.add('err');msgEl.textContent=BLOCKED;return false;
   });
 }
-function syncVirtualUI(){
-  document.querySelectorAll('#valves .valve').forEach(function(b,i){b.setAttribute('aria-pressed',S.valves[i])});
-  document.querySelectorAll('#partials button').forEach(function(b,i){b.setAttribute('aria-pressed',i===S.partial)});
-  $('#blow').classList.toggle('on',S.blow);
+function updateMicButtons(){
+  var t=mic.on?'Mikrofon ausschalten':'Mikrofon einschalten';
+  $('#micBtn').textContent=t;$('#pMicBtn').textContent=t;
+}
+function toggleMic(msgEl){
+  if(mic.on){disableMic();msgEl.classList.remove('err');msgEl.textContent='Mikrofon aus.';updateMicButtons();return}
+  tryMic(msgEl).then(updateMicButtons);
 }
 
 function init(){
-  var pt=$('#partials');
-  PARTIALS.forEach(function(m,i){var b=document.createElement('button');b.textContent=nameOf(m);b.setAttribute('aria-label','Naturton '+nameOf(m));b.addEventListener('click',function(){S.partial=i;syncVirtualUI()});pt.appendChild(b)});
-  document.querySelectorAll('#valves .valve').forEach(function(b,i){b.addEventListener('click',function(){S.valves[i]=!S.valves[i];syncVirtualUI()})});
-  var blow=$('#blow');
-  blow.addEventListener('pointerdown',function(e){e.preventDefault();try{blow.setPointerCapture(e.pointerId)}catch(x){}ac();S.blow=true;syncVirtualUI()});
-  ['pointerup','pointercancel','lostpointercapture'].forEach(function(ev){blow.addEventListener(ev,function(){S.blow=false;syncVirtualUI()})});
-  blow.addEventListener('contextmenu',function(e){e.preventDefault()});
-
-  document.addEventListener('keydown',function(e){
-    if(S.view!=='play'||S.input!=='virtual')return;
-    var t=e.target&&e.target.tagName;if(t==='INPUT')return;
-    var k=e.key.toLowerCase(),used=true;
-    if(k==='j')S.valves[0]=true;else if(k==='k')S.valves[1]=true;else if(k==='l')S.valves[2]=true;
-    else if(e.key===' '){ac();S.blow=true}
-    else if(e.key==='ArrowUp')S.partial=Math.min(5,S.partial+1);
-    else if(e.key==='ArrowDown')S.partial=Math.max(0,S.partial-1);
-    else used=false;
-    if(used){e.preventDefault();syncVirtualUI()}
-  });
-  document.addEventListener('keyup',function(e){
-    if(S.view!=='play'||S.input!=='virtual')return;
-    var k=e.key.toLowerCase();
-    if(k==='j')S.valves[0]=false;else if(k==='k')S.valves[1]=false;else if(k==='l')S.valves[2]=false;
-    else if(e.key===' ')S.blow=false;else return;
-    syncVirtualUI();
-  });
-  document.addEventListener('visibilitychange',function(){if(document.hidden){S.blow=false;voiceOff();syncVirtualUI()}});
+  document.addEventListener('visibilitychange',function(){if(!document.hidden&&A&&A.state==='suspended')A.resume()});
 
   $('#lessonList').addEventListener('click',function(e){var b=e.target.closest('.lesson');if(b)openLesson(+b.dataset.id)});
   $('#resume').addEventListener('click',function(e){var b=e.target.closest('#resumeBtn');if(b)openLesson(+b.dataset.id)});
   $('#back').addEventListener('click',function(){show('home')});
-  $('#startBtn').addEventListener('click',function(){if(S.phase==='idle'||S.phase==='preview'){startRun()}else{stopRun();resetNotes()}});
+  $('#startBtn').addEventListener('click',function(){
+    if(S.phase==='idle'||S.phase==='preview'){
+      if(mic.on){startRun()}
+      else{tryMic($('#pMicMsg')).then(function(ok){updateMicButtons();if(ok)startRun()})}
+    }else{stopRun();resetNotes()}
+  });
   $('#listenBtn').addEventListener('click',function(){if(S.phase==='preview'){stopRun();resetNotes()}else startPreview()});
   $('#mWait').addEventListener('click',function(){S.mode='wait';$('#mWait').setAttribute('aria-pressed',true);$('#mBeat').setAttribute('aria-pressed',false);stopRun();resetNotes();updateModeHelp()});
   $('#mBeat').addEventListener('click',function(){S.mode='beat';$('#mBeat').setAttribute('aria-pressed',true);$('#mWait').setAttribute('aria-pressed',false);stopRun();resetNotes();updateModeHelp()});
   $('#bpm').addEventListener('input',function(e){S.bpm=+e.target.value;$('#bpmV').textContent=S.bpm});
   $('#labels').checked=saved.labels!==false;
   $('#labels').addEventListener('change',function(){saved.labels=$('#labels').checked;persist();buildNotes();refreshNoteClasses()});
-  $('#inVirt').addEventListener('click',function(){setInput('virtual')});
-  $('#inMic').addEventListener('click',function(){
-    setInput('mic');
-    tryMic($('#pMicMsg')).then(function(ok){if(!ok)setInput('virtual')});
-  });
-  $('#micBtn').addEventListener('click',function(){
-    var b=$('#micBtn');
-    if(mic.on){disableMic();b.textContent='Mikrofon einschalten';$('#micMsg').textContent='';return}
-    tryMic($('#micMsg')).then(function(ok){if(ok){b.textContent='Mikrofon ausschalten'}});
-  });
+  $('#micBtn').addEventListener('click',function(){toggleMic($('#micMsg'))});
+  $('#pMicBtn').addEventListener('click',function(){toggleMic($('#pMicMsg'))});
   $('#rAgain').addEventListener('click',function(){$('#result').hidden=true;resetNotes()});
   $('#rHome').addEventListener('click',function(){$('#result').hidden=true;show('home')});
   $('#rNext').addEventListener('click',function(){$('#result').hidden=true;openLesson(S.lesson.id+1)});
   window.addEventListener('resize',function(){if(S.view==='play'){drawStatic();paintScroll()}});
 
-  syncVirtualUI();renderHome();setInput('virtual');
+  renderHome();updateMicButtons();
   requestAnimationFrame(frame);
 }
 init();
